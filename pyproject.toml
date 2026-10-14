@@ -1,0 +1,16 @@
+[project]
+name = "ecommerce-data-pipeline"
+version = "1.0.0"
+description = "Batch ELT pipeline and analytics warehouse for e-commerce data (Python, DuckDB, SQL)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
