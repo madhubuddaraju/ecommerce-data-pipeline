@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Storefront Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body { margin: 0; }
+img { max-width: 100%; }
+
+/* Layout: operator console - status header, one filter row, KPI strip, then chart grid that stacks to one column on phones */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --line: #e3e6ec; --ink: #141821; --ink-2: #545b69; --ink-3: #8a90a0;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --good: #1a7f4b; --good-bg: #e3f4ea; --warn: #9a6200; --warn-bg: #fdf1d8; --bad: #b42318; --bad-bg: #fde7e5;
+  --f-display: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111318; --surface: #191c23; --line: #2a2e38; --ink: #eef0f4; --ink-2: #b4b9c6; --ink-3: #7d8394;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good: #5ccf8f; --good-bg: #13301f; --warn: #e8b04a; --warn-bg: #33270f; --bad: #f2867b; --bad-bg: #3a1714;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c23; --line: #2a2e38; --ink: #eef0f4; --ink-2: #b4b9c6; --ink-3: #7d8394;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good: #5ccf8f; --good-bg: #13301f; --warn: #e8b04a; --warn-bg: #33270f; --bad: #f2867b; --bad-bg: #3a1714;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 16px; }
+h1 { font-family: var(--f-display); font-size: 24px; font-weight: 700; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-size: 15px; font-weight: 600; margin: 0; text-wrap: balance; }
+.sub { color: var(--ink-2); margin: 2px 0 0; }
+.mono, td.num, .kpi .v, .chip { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.chip.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.chip.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.field { display: grid; gap: 4px; }
+select { font: inherit; font-size: 13px; padding: 7px 30px 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); cursor: pointer; }
+select:focus-visible, button:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+.presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.presets button { font: inherit; font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.kpi { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; }
+.kpi .v { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+.delta { font-family: var(--f-data); font-size: 12px; color: var(--ink-3); }
+.delta.up { color: var(--good); } .delta.down { color: var(--bad); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.note { color: var(--ink-3); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.chart { position: relative; height: 300px; }
+.chart.short { height: 260px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+.scroll { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th.num, td.num { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+
+.cohort { border-collapse: separate; border-spacing: 2px; font-size: 11px; }
+.cohort td, .cohort th { border: 0; padding: 0; }
+.cohort th { padding: 4px; text-align: center; }
+.cohort th.row { text-align: right; padding-right: 8px; font-family: var(--f-data); text-transform: none; letter-spacing: 0; }
+.cohort td { width: 46px; min-width: 40px; height: 24px; text-align: center; border-radius: 4px; font-family: var(--f-data); }
+
+.seg { display: inline-flex; align-items: center; gap: 6px; }
+.bar-cell { display: grid; grid-template-columns: 1fr 44px; gap: 8px; align-items: center; min-width: 140px; }
+.bar-track { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--s1); border-radius: 3px; }
+
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 16px; }
+.check { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.check b { color: var(--good); font-family: var(--f-data); font-weight: 500; }
+.check.fail b { color: var(--bad); }
+.check span { overflow-wrap: anywhere; }
+footer { color: var(--ink-3); font-size: 12px; }
+footer a { color: var(--s1); }
+
+@media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .grid2 { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpi .v { font-size: 19px; } .chart { height: 260px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="label">ecommerce-data-pipeline · DuckDB warehouse</div>
+      <h1>Storefront Analytics</h1>
+      <p class="sub">Completed orders, net of discounts, Jan 2024 to Dec 2025</p>
+    </div>
+    <div class="status" id="status"></div>
+  </header>
+
+  <div class="filters">
+    <div class="field"><label class="label" for="from">From</label><select id="from"></select></div>
+    <div class="field"><label class="label" for="to">To</label><select id="to"></select></div>
+    <div class="field"><span class="label">Quick range</span>
+      <div class="presets" id="presets">
+        <button type="button" data-p="all" aria-pressed="true">All time</button>
+        <button type="button" data-p="2025">2025</button>
+        <button type="button" data-p="2024">2024</button>
+        <button type="button" data-p="q4">Last Q4</button>
+      </div>
+    </div>
+    <div class="field"><label class="label" for="country">Country</label><select id="country"></select></div>
+  </div>
+
+  <section class="kpis" id="kpis" aria-label="Key metrics"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Monthly revenue</h2>
+      <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Returning customers</span><span><i class="sw" style="background:var(--s2)"></i>New customers</span></div>
+    </div>
+    <div class="chart"><canvas id="revChart" aria-label="Monthly revenue split by new and returning customers" role="img"></canvas></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="panel-head"><h2>Revenue by category</h2><span class="note">Follows filters</span></div>
+      <div class="chart short"><canvas id="catChart" role="img" aria-label="Revenue by product category"></canvas></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Value per acquired customer</h2><span class="note">All time, by acquisition channel</span></div>
+      <div class="chart short"><canvas id="chChart" role="img" aria-label="Revenue per acquired customer by channel"></canvas></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Cohort retention</h2><span class="note">Share of each first-purchase cohort that ordered again N months later</span></div>
+    <div class="scroll"><table class="cohort" id="cohort"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="panel-head"><h2>Customer segments (RFM)</h2><span class="note">As of 1 Jan 2026</span></div>
+      <div class="scroll"><table id="rfm"></table></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Top products</h2><span class="note">All time, by revenue</span></div>
+      <div class="scroll"><table id="prod"></table></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Pipeline health</h2><span class="note" id="runNote"></span></div>
+    <div class="checks" id="checks"></div>
+  </section>
+
+  <footer>Built from the marts in <a href="https://github.com/madhubuddaraju/ecommerce-data-pipeline">madhubuddaraju/ecommerce-data-pipeline</a>. Data is synthetic and generated with a fixed seed.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D = __DATA__;
+const $ = (id) => document.getElementById(id);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtMoney = (v) => v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? "$" + (v / 1e3).toFixed(1) + "K" : "$" + Math.round(v);
+const fmtInt = (v) => Math.round(v).toLocaleString("en-US");
+const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+const monthLabel = (m) => { const [y, mo] = m.split("-"); return new Date(+y, +mo - 1, 1).toLocaleString("en-US", { month: "short" }) + " " + y; };
+
+// ---- filters ------------------------------------------------------------------
+const state = { from: 0, to: D.months.length - 1, country: -1 };
+D.months.forEach((m, i) => { $("from").add(new Option(monthLabel(m), i)); $("to").add(new Option(monthLabel(m), i)); });
+$("country").add(new Option("All countries", -1));
+D.countries.forEach((c, i) => $("country").add(new Option(c === "UNKNOWN" ? "Unknown" : c, i)));
+function syncControls() { $("from").value = state.from; $("to").value = state.to; $("country").value = state.country; }
+$("from").onchange = (e) => { state.from = +e.target.value; if (state.from > state.to) state.to = state.from; setPreset(null); render(); };
+$("to").onchange = (e) => { state.to = +e.target.value; if (state.to < state.from) state.from = state.to; setPreset(null); render(); };
+$("country").onchange = (e) => { state.country = +e.target.value; render(); };
+function setPreset(p) { document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.p === p)); }
+const idx = (m) => D.months.indexOf(m);
+$("presets").onclick = (e) => {
+  const p = e.target.dataset?.p; if (!p) return;
+  const last = D.months.length - 1;
+  if (p === "all") Object.assign(state, { from: 0, to: last });
+  if (p === "2025") Object.assign(state, { from: idx("2025-01"), to: idx("2025-12") });
+  if (p === "2024") Object.assign(state, { from: 0, to: idx("2024-12") });
+  if (p === "q4") Object.assign(state, { from: idx("2025-10"), to: idx("2025-12") });
+  setPreset(p); render();
+};
+
+// ---- aggregation over embedded rows ---------------------------------------------
+function totals(from, to, country) {
+  let rev = 0, orders = 0, gp = 0; const buyers = new Set();
+  for (const [m, c, o, r, nr, g] of D.agg) if (m >= from && m <= to && (country < 0 || c === country)) { rev += r; orders += o; gp += g; }
+  for (const [m, c, id] of D.act) if (m >= from && m <= to && (country < 0 || c === country)) buyers.add(id);
+  return { rev, orders, gp, buyers: buyers.size, aov: orders ? rev / orders : 0, margin: rev ? gp / rev : 0 };
+}
+
+function renderKpis() {
+  const t = totals(state.from, state.to, state.country);
+  const span = state.to - state.from + 1;
+  const pf = state.from - span, pt = state.from - 1;
+  const prev = pf >= 0 ? totals(pf, pt, state.country) : null;
+  const delta = (cur, old, isRate) => {
+    if (!prev || !old) return `<span class="delta">No prior ${span}-month period</span>`;
+    const d = isRate ? cur - old : cur / old - 1;
+    const cls = d >= 0 ? "up" : "down", sign = d >= 0 ? "+" : "";
+    const txt = isRate ? `${sign}${(d * 100).toFixed(1)} pts` : `${sign}${(d * 100).toFixed(0)}%`;
+    return `<span class="delta ${cls}">${txt} vs prior ${span} mo</span>`;
+  };
+  const items = [
+    ["Revenue", fmtMoney(t.rev), delta(t.rev, prev?.rev)],
+    ["Orders", fmtInt(t.orders), delta(t.orders, prev?.orders)],
+    ["Buying customers", fmtInt(t.buyers), delta(t.buyers, prev?.buyers)],
+    ["Avg order value", "$" + t.aov.toFixed(2), delta(t.aov, prev?.aov)],
+    ["Gross margin", pct(t.margin), delta(t.margin, prev?.margin, true)],
+  ];
+  $("kpis").innerHTML = items.map(([l, v, d]) => `<div class="kpi"><span class="label">${l}</span><span class="v">${v}</span>${d}</div>`).join("");
+}
+
+// ---- charts ------------------------------------------------------------------------
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.font.size = 12;
+let revChart, catChart, chChart;
+function baseOpts(horizontal) {
+  const grid = css("--line"), ink = css("--ink-2");
+  const money = (v) => fmtMoney(v);
+  const valueAxis = { grid: { color: grid, drawTicks: false }, border: { display: false }, ticks: { color: ink, padding: 8, callback: money } };
+  const catAxis = { grid: { display: false }, border: { color: grid }, ticks: { color: ink } };
+  return {
+    responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+    indexAxis: horizontal ? "y" : "x",
+    interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: css("--surface"), titleColor: css("--ink"), bodyColor: css("--ink-2"), borderColor: grid, borderWidth: 1,
+      padding: 10, boxPadding: 4, usePointStyle: true,
+      callbacks: { label: (c) => ` ${c.dataset.label}: ${fmtMoney(c.parsed[horizontal ? "x" : "y"])}` } } },
+    scales: horizontal ? { x: valueAxis, y: catAxis } : { x: { ...catAxis, stacked: true }, y: { ...valueAxis, stacked: true } },
+  };
+}
+
+function renderRevenue() {
+  const labels = [], ret = [], nw = [];
+  for (let i = state.from; i <= state.to; i++) {
+    let r = 0, n = 0;
+    for (const [m, c, o, rv, nr] of D.agg) if (m === i && (state.country < 0 || c === state.country)) { r += rv; n += nr; }
+    labels.push(monthLabel(D.months[i])); ret.push(+(r - n).toFixed(2)); nw.push(+n.toFixed(2));
+  }
+  const data = { labels, datasets: [
+    { label: "New customers", data: nw, backgroundColor: css("--s2"), borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 }, borderSkipped: false, borderColor: css("--surface"), borderWidth: { top: 2 } },
+    { label: "Returning customers", data: ret, backgroundColor: css("--s1"), borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: false },
+  ] };
+  const opts = baseOpts(false);
+  opts.plugins.tooltip.itemSort = (a, b) => b.datasetIndex - a.datasetIndex;
+  opts.plugins.tooltip.callbacks.footer = (items) => "Total: " + fmtMoney(items.reduce((s, i) => s + i.parsed.y, 0));
+  opts.datasets = { bar: { categoryPercentage: 0.78, barPercentage: 0.9 } };
+  revChart?.destroy(); revChart = new Chart($("revChart"), { type: "bar", data, options: opts });
+}
+
+function renderCategories() {
+  const sums = D.cats.map(() => 0);
+  for (const [m, c, g, v] of D.cat) if (m >= state.from && m <= state.to && (state.country < 0 || c === state.country)) sums[g] += v;
+  const rows = D.cats.map((c, i) => [c, sums[i]]).sort((a, b) => b[1] - a[1]);
+  const opts = baseOpts(true);
+  opts.plugins.tooltip.callbacks.label = (c) => ` Revenue: ${fmtMoney(c.parsed.x)}`;
+  catChart?.destroy();
+  catChart = new Chart($("catChart"), { type: "bar", options: opts, data: { labels: rows.map((r) => r[0]),
+    datasets: [{ label: "Revenue", data: rows.map((r) => +r[1].toFixed(2)), backgroundColor: css("--s1"), borderRadius: 4, barPercentage: 0.7 }] } });
+}
+
+function renderChannels() {
+  const rows = [...D.ch].sort((a, b) => b[4] - a[4]);
+  const opts = baseOpts(true);
+  opts.scales.x.ticks.callback = (v) => "$" + fmtInt(v);
+  opts.plugins.tooltip.callbacks.label = (c) => {
+    const r = rows[c.dataIndex];
+    return [` Revenue per customer: $${fmtInt(r[4])}`, ` Converted to buyer: ${pct(r[2], 0)}`, ` Repeat buyers: ${pct(r[3], 0)}`, ` Customers acquired: ${fmtInt(r[1])}`];
+  };
+  chChart?.destroy();
+  chChart = new Chart($("chChart"), { type: "bar", options: opts, data: { labels: rows.map((r) => r[0].replace("_", " ")),
+    datasets: [{ label: "Revenue per customer", data: rows.map((r) => r[4]), backgroundColor: css("--s3"), borderRadius: 4, barPercentage: 0.7 }] } });
+}
+
+// ---- tables ------------------------------------------------------------------------
+function renderCohort() {
+  const by = {};
+  for (const [c, k, r, size] of D.coh) (by[c] ??= { size, cells: {} }).cells[k] = r;
+  let h = "<thead><tr><th class='row'>Cohort</th><th>Size</th>" + Array.from({ length: 12 }, (_, i) => `<th>M${i + 1}</th>`).join("") + "</tr></thead><tbody>";
+  for (const c of Object.keys(by).sort()) {
+    h += `<tr><th class="row">${c}</th><td style="color:var(--ink-3)">${by[c].size}</td>`;
+    for (let k = 1; k <= 12; k++) {
+      const r = by[c].cells[k];
+      if (r == null) { h += "<td></td>"; continue; }
+      const mix = Math.round(Math.min(r / 0.7, 1) * 100);
+      h += `<td title="${c}, month ${k}: ${pct(r)} of ${by[c].size} customers" style="background:color-mix(in oklab, var(--s1) ${mix}%, var(--surface));color:${mix > 55 ? "#fff" : "var(--ink)"}">${Math.round(r * 100)}%</td>`;
+    }
+    h += "</tr>";
+  }
+  $("cohort").innerHTML = h + "</tbody>";
+}
+
+function renderRfm() {
+  const total = D.rfm.reduce((s, r) => s + r[2], 0);
+  const tone = { "Champions": "good", "Loyal": "good", "At Risk": "bad", "Hibernating": "warn", "Needs Attention": "warn", "New / Promising": "" };
+  const color = { good: "var(--good)", bad: "var(--bad)", warn: "var(--warn)", "": "var(--s1)" };
+  $("rfm").innerHTML = "<thead><tr><th>Segment</th><th class='num'>Customers</th><th>Share of revenue</th><th class='num'>Days since order</th><th class='num'>Orders</th></tr></thead><tbody>" +
+    D.rfm.map(([s, n, rev, rec, freq]) => `<tr><td><span class="seg"><i class="dot" style="color:${color[tone[s]]}"></i>${s}</span></td>
+      <td class="num">${fmtInt(n)}</td>
+      <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${(rev / total * 100).toFixed(1)}%"></div></div><span class="mono" style="font-size:12px">${pct(rev / total, 0)}</span></div></td>
+      <td class="num">${rec}</td><td class="num">${freq}</td></tr>`).join("") + "</tbody>";
+}
+
+function renderProducts() {
+  $("prod").innerHTML = "<thead><tr><th>Product</th><th>Category</th><th class='num'>Units</th><th class='num'>Revenue</th><th class='num'>Margin</th><th class='num'>Returns</th></tr></thead><tbody>" +
+    D.prod.map(([sku, name, cat, u, rev, m, ret]) => `<tr><td>${name} <span class="mono" style="color:var(--ink-3);font-size:11px">${sku}</span></td><td>${cat}</td>
+      <td class="num">${fmtInt(u)}</td><td class="num">${fmtMoney(rev)}</td><td class="num">${pct(m, 0)}</td><td class="num">${pct(ret, 1)}</td></tr>`).join("") + "</tbody>";
+}
+
+function renderHealth() {
+  const passed = D.dq.filter((d) => d[3]).length;
+  const [ts, status, dur, rawRows, rejected] = D.run;
+  $("status").innerHTML =
+    `<span class="chip ${status === "success" ? "good" : "warn"}"><i class="dot"></i>Last run ${status}</span>` +
+    `<span class="chip ${passed === D.dq.length ? "good" : "warn"}"><i class="dot"></i>${passed}/${D.dq.length} quality checks</span>` +
+    `<span class="chip">${fmtInt(rejected)} rows rejected</span>`;
+  $("runNote").textContent = `Last run ${ts} · ${dur}s · ${fmtInt(rawRows)} raw order rows · ${D.rej.map(([r, n]) => `${fmtInt(n)} rejected: ${r}`).join("; ")}`;
+  $("checks").innerHTML = D.dq.map(([name, sev, fail, ok]) =>
+    `<div class="check ${ok ? "" : "fail"}"><b>${ok ? "PASS" : "FAIL"}</b><span>${name}${sev === "warn" ? " <span style='color:var(--ink-3)'>(warn)</span>" : ""}</span></div>`).join("");
+}
+
+function render() { syncControls(); renderKpis(); renderRevenue(); renderCategories(); }
+function renderThemed() { renderRevenue(); renderCategories(); renderChannels(); }
+
+renderCohort(); renderRfm(); renderProducts(); renderHealth(); renderChannels(); render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderThemed);
+new MutationObserver(renderThemed).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+</body>
+</html>

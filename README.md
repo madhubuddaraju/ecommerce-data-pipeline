@@ -4,6 +4,8 @@
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 ![DuckDB](https://img.shields.io/badge/warehouse-DuckDB-yellow)
 
+**Live dashboard: [madhubuddaraju.github.io/ecommerce-data-pipeline](https://madhubuddaraju.github.io/ecommerce-data-pipeline/)**
+
 An end-to-end batch data pipeline that turns messy operational exports from an online store into a
 tested, analytics-ready warehouse, then answers real business questions on top of it:
 **Where does revenue come from? Which customers are we about to lose? Which acquisition channels are worth paying for?**
