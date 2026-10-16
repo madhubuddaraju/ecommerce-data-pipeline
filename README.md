@@ -1,10 +1,10 @@
 # E-commerce Data Pipeline & Analytics Warehouse
 
-![CI](https://github.com/madhubuddaraju/ecommerce-data-pipeline/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/subbarajubuddaraju/ecommerce-data-pipeline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 ![DuckDB](https://img.shields.io/badge/warehouse-DuckDB-yellow)
 
-**Live dashboard: [madhubuddaraju.github.io/ecommerce-data-pipeline](https://madhubuddaraju.github.io/ecommerce-data-pipeline/)**
+**Live dashboard: [subbarajubuddaraju.github.io/ecommerce-data-pipeline](https://subbarajubuddaraju.github.io/ecommerce-data-pipeline/)**
 
 An end-to-end batch data pipeline that turns messy operational exports from an online store into a
 tested, analytics-ready warehouse, then answers real business questions on top of it:
@@ -100,7 +100,7 @@ Full, auto-generated report: [`reports/insights.md`](reports/insights.md)
 ## Quick start
 
 ```bash
-git clone https://github.com/madhubuddaraju/ecommerce-data-pipeline.git
+git clone https://github.com/subbarajubuddaraju/ecommerce-data-pipeline.git
 cd ecommerce-data-pipeline
 python -m venv .venv && source .venv/bin/activate
 make install
